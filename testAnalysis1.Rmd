@@ -1,0 +1,93 @@
+#Part A: Loading and Processing the data
+
+## A1: Code needed to load the data
+
+```{r, echo=TRUE}
+
+#Loading and preprocessing the data
+act<-read.csv("C:/Users/Dan_Wolf/Documents/DataScience/JHU5_RR/activity.csv",na.strings="NA")
+head(act)
+summary(act)
+
+```
+## A2: Preprocess the data: 
+###     Make interval a factor
+```{r, echo=TRUE}
+#make interval a factor
+act$interval <- factor(act$interval)
+#install.packages("timeDate")
+library(timeDate)
+#Create a column that indicates of a day is a weekday or weekend
+act$dayType<-ifelse(isWeekday(act$date, wday=1:5),"Weekday","Weekend")
+# check 
+table(act$dayType)
+
+
+```
+
+#Part B: What is mean total number of steps taken per day?
+
+
+## B1: Calculate Total number of steps taken per day 
+
+```{r, echo=TRUE,results="hide"}
+
+#install.packages("plyr")
+library(plyr)
+ddply(act,.(date),summarize, "mean"=mean(steps,na.rm=TRUE), "median" = median(steps,na.rm=TRUE),"sum"=sum(steps,na.rm=TRUE))
+
+```
+
+## B2: Histogram of total steps taken each day
+
+```{r, echo=TRUE}
+
+StepsPerDay<-ddply(act,.(date),summarize,"sum"=sum(steps,na.rm=TRUE), "mean"=mean(steps,na.rm=TRUE), "median" = median(steps,na.rm=TRUE))
+#install.packages("ggplot2")
+library(ggplot2)
+hist(StepsPerDay$sum,breaks=10)
+```
+
+## B3: Mean, median and total number (Sum) of steps taken each day
+```{r, echo=TRUE}
+print (StepsPerDay)
+```
+
+
+
+#Part C: What is average daily Activity pattern? 
+
+## C1: Plot 5 min interval vs avg number of steps taken averaged across all days
+
+
+```{r, echo=TRUE}
+meanStepsPerInterval<-ddply(act,.(interval),summarize,"mean"=mean(steps,na.rm=TRUE))
+plot(x<-as.numeric(paste(meanStepsPerInterval$interval)),y<-meanStepsPerInterval$mean,type="l")
+```
+
+
+## C2: Which 5 min interval across all days in the data set contains the max number of steps? 
+
+
+# Part D: Imputing missing values: 
+
+## D1: Total number of missing values:
+
+## D2: Strategy for imputing missing values: Use mean for 5 min intervals.  This requires merging the 5min mean file from above with the act data frame. 
+
+## D3: Create new data set
+
+## D4: Historgram of total numbr of steps taken each day
+
+## D5: Mean, median and total number (Sum) of steps taken each day
+
+## D6: Conclusion: Do these values differ fron B3? _____  What is impact: ___
+
+
+# Part E: Are there differences between activity patterns between weekdays and weekends? 
+
+## E1: Create new factos 
+
+## E2: Panel Plots
+
+## E3: Conclusion
