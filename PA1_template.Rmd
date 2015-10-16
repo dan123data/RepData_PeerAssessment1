@@ -1,25 +1,174 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Part A: Loading and Processing the data
+
+## A1: Code needed to load the data
+
+```{r, echo=TRUE}
+
+#Loading and preprocessing the data
+act<-read.csv("C:/Users/Dan_Wolf/Documents/DataScience/JHU5_RR/activity.csv",na.strings="NA")
+head(act)
+summary(act)
+
+```
+
+## A2: Preprocess the data 
+Make interval a factor
+```{r, echo=TRUE}
+#make interval a factor
+act$interval <- factor(act$interval)
+#install.packages("timeDate")
+library(timeDate)
+#Create a column that indicates of a day is a weekday or weekend
+act$dayType<-ifelse(isWeekday(act$date, wday=1:5),"Weekday","Weekend")
+# check 
+table(act$dayType)
 
 
-## Loading and preprocessing the data
+```
 
 
+# Part B: What is mean total number of steps taken per day?
 
-## What is mean total number of steps taken per day?
+## B1: Calculate Total number of steps taken per day 
+
+```{r, echo=TRUE,results="hide"}
+
+#install.packages("plyr")
+library(plyr)
+ddply(act,.(date),summarize, "mean"=mean(steps,na.rm=TRUE), "median" = median(steps,na.rm=TRUE),"sum"=sum(steps,na.rm=TRUE))
+
+```
+
+## B2: Histogram of total steps taken each day
+
+```{r, echo=TRUE}
+StepsPerDay<-ddply(act,.(date),summarize,"sum"=sum(steps,na.rm=TRUE), "mean"=mean(steps,na.rm=TRUE), "median" = median(steps,na.rm=TRUE))
+#install.packages("ggplot2")
+library(ggplot2)
+hist(StepsPerDay$sum,breaks=10,main="Distribution of Total Steps Per Day")
+```
+
+## B3: Mean, median and total number (Sum) of steps taken each day
+```{r, echo=TRUE}
+print (StepsPerDay)
+```
 
 
+# Part C: What is average daily activity pattern? 
 
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
+## C1: Plot 5 min interval vs average number of steps taken averaged across all days
 
 
+```{r, echo=TRUE}
 
-## Are there differences in activity patterns between weekdays and weekends?
+meanStepsPerInterval<-ddply(act,.(interval),summarize,"mean"=mean(steps,na.rm=TRUE))
+plot(x<-as.numeric(paste(meanStepsPerInterval$interval)),y<-meanStepsPerInterval$mean,type="l",xlab="Interval Start Time",ylab="Average Total Steps per 5min Interval", main="Average Total Steps Per 5 Min Interval")
+
+```
+
+
+## C2: Which 5 min interval across all days in the data set contains the max number of steps? 
+
+```{r, echo=TRUE}
+# find max sum
+sumStepsPerInterval<-ddply(act,.(interval),summarize,"sum"=sum(steps,na.rm=TRUE))
+sumStepsPerInterval$sum<-as.numeric(sumStepsPerInterval$sum)
+sumStepsPerIntervalOrdered <- sumStepsPerInterval[order(sumStepsPerInterval$sum,decreasing=TRUE),]
+maxInterval<-as.numeric(as.character(sumStepsPerIntervalOrdered$interval[1]))
+maxSum<- as.numeric(sumStepsPerIntervalOrdered$sum[1])
+print (maxSum)
+print (maxInterval)
+```
+
+The 8:35am to 8:40am interval contains the max number of steps across all days at 10927 steps.
+
+
+# Part D: Imputing missing values: 
+
+## D1: Total number of rows with steps values missing
+
+```{r, echo=TRUE}
+missing <- sum(is.na(act$steps))
+print (missing)
+```
+
+There are 2304 rows with missing values
+
+
+## D2: Strategy for imputing missing values: I'll use mean for 5 min intervals.  This requires merging the 5min mean file from above with the act data frame. 
+
+## D3: Create new data set
+
+This is tricky - need to merge two data sets using 'interval' as the match key. 
+Then create new steps_imputed column (I wanted to save the old, unimputed value)
+
+```{r, echo=TRUE}
+act_merged<-merge(act,meanStepsPerInterval,by="interval")
+
+for (row in act_merged) 
+     { 
+       act_merged$steps_imputed<-ifelse(is.na(act_merged$steps),act_merged$mean,act_merged$steps)
+     }
+
+```
+
+Then create a new data frame with mean, median and sum
+
+```{r,echo=TRUE}
+StepsPerDayImputed<-ddply(act_merged,.(date),summarize,"sum"=sum(steps_imputed,na.rm=TRUE), "mean"=mean(steps_imputed,na.rm=TRUE), "median" = median(steps_imputed,na.rm=TRUE))
+
+```
+
+## D4: Historgram of total numbr of steps taken each day after imputations
+
+```{r,echo=TRUE}
+
+hist(StepsPerDayImputed$sum,breaks=10,main="Distribution of Total Steps Per Day after Imputations")
+```
+```{r,echo=TRUE}
+print (StepsPerDayImputed)
+```
+
+## D5: Mean, median and total number (Sum) of steps taken each day after imputation
+
+```{r,echo=TRUE}
+print (StepsPerDayImputed)
+```
+
+## D6: Conclusion: Do these values differ from B3?  
+
+## Yes - the historgram is more centered, less extreme values.  What is impact: The Sums and means are less extreme.  
+
+
+# Part E: Are there differences between activity patterns between weekdays and weekends? 
+
+## E1: Create new factors 
+
+This was done in section A2
+
+
+## E2: Graph Panel Plot of weekday and weekend activity
+
+```{r,echo=TRUE}
+# convert interval to numeric and date to character
+
+act_merged$interval<-as.numeric(paste(act_merged$interval))
+act_merged$date<-as.character(paste(act_merged$date))
+#install.packages("rshape2")
+library(reshape2)
+# use melt to create a long table for data manipulation
+actmelt <- melt(act_merged,id=c("interval","dayType"),measure.vars=c("steps_imputed"))
+
+# take mean of steps imputed across dayType and interval
+actmelt <- dcast(actmelt, dayType + interval ~ variable,fun.aggregate=mean)
+
+#Plot
+library(ggplot2)
+sp <- ggplot(actmelt, aes(x=interval, y=steps_imputed),ylab="Average Steps Per Interval",xlab="Start Time of Interval") + geom_line() + facet_grid(dayType~.)
+sp
+```
+
+## E3: Conclusion
+
+## Looks like my mother when I was little!  Get up really early - get the kids off to school weekdays, Go running or gym 8:30 to 9:30, get to work by 10. Weekends sleep in then go running 8:30 to 9:30.
+
