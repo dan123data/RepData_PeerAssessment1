@@ -49,6 +49,13 @@ hist(StepsPerDay$sum,breaks=10,main="Distribution of Total Steps Per Day")
 ```
 
 ## B3: Mean, median and total number (Sum) of steps taken each day
+
+## Note: 
+## I did ignore NA's and I did calculate median
+## Median is zero - due to the fact that most 5 min intervals have no activity
+## There are some days with no reporting so there will be some NAN and NA's in this table
+
+
 ```{r, echo=TRUE}
 print (StepsPerDay)
 ```
